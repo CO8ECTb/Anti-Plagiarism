@@ -4,7 +4,6 @@ import java.util.*;
 
 
 public class Main {
-    private static int LIMIT = 3;
     private static int MIN_FILE_LEN = 20;
 
     public static void main(String[] args) {
@@ -12,7 +11,13 @@ public class Main {
         List<String> content1 = parseFile("data/1.c", keyWords);
         List<String> content2 = parseFile("data/2.c", keyWords);
         boolean foundPlagiat = areSameListings(content1, content2);
-        System.out.println("Это" + (foundPlagiat ? " очень похоже на плагиат" : " не похоже на плагиат"));
+        // System.out.println("Это" + (foundPlagiat ? " очень похоже на плагиат" : " не похоже на плагиат"));
+        // System.out.println(calcDist("if ( a % a = = b ) return a ;", "a or ( a = b ; a < a ; a + + )"));
+        // System.out.println(calcDist("if ( a % a = = b ) return a ;", "a + = ( b [ a ] * b [ a ] ) ;"));
+        // System.out.println(calcDist("if ( a % a = = b ) return a ;", "a or ( a = b ; a < a ; a + + )"));
+        // System.out.println(calcDist("if ( a % a = = b ) return a ;", "a int a ( \" % a \" , a [ a ] )"));
+        // System.out.println(calcDist("int a ;", "break;"));
+        // System.out.println(calcDist("int a ;", "return a ;"));
     }
 
     private static HashSet<String> initKeyWords(String filename) {
@@ -107,31 +112,39 @@ public class Main {
 
 
     static int calcDist(String a, String b) {
-        if (a.length() > b.length()) {
-            a = a + b;
-            b = a.substring(0, (a.length() - b.length()));
-            a = a.substring(b.length());
+        List<String> la = splitLineBySpace(a);
+        List<String> lb = splitLineBySpace(b);
+        if (la.size() > lb.size()) {
+            List<String> tmp = new ArrayList<>(la);
+            la.clear();
+            la.addAll(lb);
+            lb.clear();
+            lb.addAll(tmp);
         }
         // now a.length() <= b.length()
 
-        int dist[][] = new int[2][1 + a.length()];
+        int dist[][] = new int[2][1 + la.size()];
         int cur = 1;
-        for (int i = 0; i <= b.length(); ++i) {
+        for (int i = 0; i <= lb.size(); ++i) {
             cur ^= 1;
-            for (int j = 0; j <= a.length(); ++j) {
+            for (int j = 0; j <= la.size(); ++j) {
                 if (i == 0 || j == 0) {
                     dist[cur][j] = i > j ? i : j;
                 } else {
-                    dist[cur][j] = Math.min(dist[cur ^ 1][j - 1] + (b.charAt(i - 1) == a.charAt(j - 1) ? 1 : 0), 1 + Math.min(dist[cur][j - 1], dist[cur ^ 1][j]));
+                    dist[cur][j] = Math.min(dist[cur ^ 1][j - 1] + (lb.get(i - 1).equals(la.get(j - 1)) ? 0 : 1), 1 + Math.min(dist[cur][j - 1], dist[cur ^ 1][j]));
                 }
             }
         }
 
-        return dist[cur][a.length()];
+        return dist[cur][la.size()];
     }
 
     static boolean areSameStrings(String a, String b) {
-        return calcDist(a, b) <= LIMIT;
+        int d = calcDist(a, b);
+        System.out.println(a);
+        System.out.println(b);
+        System.out.println(1.0 * d / Math.max(a.length(), b.length()));
+        return 1.0 * d / Math.max(a.length(), b.length()) <= 0.2;
     }
 
     static boolean areSuspiciousBlocks(List<String> a, List<String> b) {
