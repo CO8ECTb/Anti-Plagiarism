@@ -5,11 +5,14 @@ import java.util.*;
 
 public class Main {
     private static int LIMIT = 3;
+    private static int MIN_FILE_LEN = 20;
 
     public static void main(String[] args) {
         HashSet<String> keyWords = initKeyWords("src/KeyWords.txt");
         List<String> content1 = parseFile("data/1.c", keyWords);
         List<String> content2 = parseFile("data/2.c", keyWords);
+        boolean foundPlagiat = areSameListings(content1, content2);
+        System.out.println("Это" + (foundPlagiat ? " очень похоже на плагиат" : " не похоже на плагиат"));
     }
 
     private static HashSet<String> initKeyWords(String filename) {
@@ -80,7 +83,7 @@ public class Main {
     static List<String> splitLineBySpace(String line) {
         String[] splittedLine = line.split("\\s+");
         List<String> list = new LinkedList<>();
-        for (String token : list) {
+        for (String token : splittedLine) {
             if (!token.isEmpty()) {
                 list.add(token);
             }
@@ -131,4 +134,45 @@ public class Main {
         return calcDist(a, b) <= LIMIT;
     }
 
+    static boolean areSuspiciousBlocks(List<String> a, List<String> b) {
+        int sameStringsCount = 0;
+        for (int i = 0; i < a.size(); ++i) {
+            if (areSameStrings(a.get(i), b.get(i))) {
+                ++sameStringsCount;
+            }
+        }
+        return sameStringsCount >= 0.75 * a.size();
+    }
+
+    static double calcPlagiatFactor(List<String> content1, List<String> content2) {
+        double plagiatFactor = 0;
+        if (content1.size() > MIN_FILE_LEN && content2.size() > MIN_FILE_LEN) {
+            int suspiciousAmount = 0;
+            int totalAmount = 0;
+            for (int i = 0; i < content1.size() - 8; ++i) {
+                List<String> block1 = new ArrayList<>();
+                for (int it = 0; it < 8; ++it) {
+                    block1.add(content1.get(i + it));
+                }
+                for (int j = 0; j < content2.size() - 8; ++j) {
+                    List<String> block2 = new ArrayList<>();
+                    for (int it = 0; it < 8; ++it) {
+                        block2.add(content2.get(j + it));
+                    }
+                    ++totalAmount;
+                    if (areSuspiciousBlocks(block1, block2)) {
+                        ++suspiciousAmount;
+                    }
+                }
+            }
+
+            System.out.println("result: " + suspiciousAmount + " from " + totalAmount);
+            plagiatFactor = 1.0 * suspiciousAmount / totalAmount;
+        }
+        return plagiatFactor;
+    }
+
+    static boolean areSameListings(List<String> c1, List<String> c2) {
+        return calcPlagiatFactor(c1, c2) >= 0.45;
+    }
 }
