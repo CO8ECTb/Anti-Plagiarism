@@ -11,7 +11,7 @@ public class Main {
         List<String> content1 = parseFile("data/1.c", keyWords);
         List<String> content2 = parseFile("data/2.c", keyWords);
         boolean foundPlagiat = areSameListings(content1, content2);
-        // System.out.println("Это" + (foundPlagiat ? " очень похоже на плагиат" : " не похоже на плагиат"));
+        System.out.println("Это" + (foundPlagiat ? " очень похоже на плагиат" : " не похоже на плагиат"));
         // System.out.println(calcDist("if ( a % a = = b ) return a ;", "a or ( a = b ; a < a ; a + + )"));
         // System.out.println(calcDist("if ( a % a = = b ) return a ;", "a + = ( b [ a ] * b [ a ] ) ;"));
         // System.out.println(calcDist("if ( a % a = = b ) return a ;", "a or ( a = b ; a < a ; a + + )"));
@@ -110,6 +110,13 @@ public class Main {
         return line;
     }
 
+    static String joinList(List<String> list) {
+        StringBuilder sb = new StringBuilder();
+        for (String str : list) {
+            sb.append(str);
+        }
+        return sb.toString();
+    }
 
     static int calcDist(String a, String b) {
         List<String> la = splitLineBySpace(a);
@@ -159,33 +166,54 @@ public class Main {
 
     static double calcPlagiatFactor(List<String> content1, List<String> content2) {
         double plagiatFactor = 0;
-        if (content1.size() > MIN_FILE_LEN && content2.size() > MIN_FILE_LEN) {
+        if (Math.min(content1.size(), content2.size()) > MIN_FILE_LEN) {
             int suspiciousAmount = 0;
             int totalAmount = 0;
-            for (int i = 0; i < content1.size() - 8; ++i) {
+            for (int i = 0; i < Math.min(content1.size(), content2.size()) - 8; ++i) {
                 List<String> block1 = new ArrayList<>();
                 for (int it = 0; it < 8; ++it) {
                     block1.add(content1.get(i + it));
                 }
-                for (int j = 0; j < content2.size() - 8; ++j) {
-                    List<String> block2 = new ArrayList<>();
-                    for (int it = 0; it < 8; ++it) {
-                        block2.add(content2.get(j + it));
-                    }
-                    ++totalAmount;
-                    if (areSuspiciousBlocks(block1, block2)) {
-                        ++suspiciousAmount;
-                    }
+                List<String> block2 = new ArrayList<>();
+                for (int it = 0; it < 8; ++it) {
+                    block2.add(content2.get(i + it));
+                }
+
+                ++totalAmount;
+                if (areSuspiciousBlocks(block1, block2)) {
+                    ++suspiciousAmount;
                 }
             }
 
-            System.out.println("result: " + suspiciousAmount + " from " + totalAmount);
+            // System.out.println("result: " + suspiciousAmount + " from " + totalAmount);
             plagiatFactor = 1.0 * suspiciousAmount / totalAmount;
+        } else {
+            plagiatFactor = areSameStrings(joinList(content1), joinList(content2)) ? 1 : 0;
         }
         return plagiatFactor;
     }
 
     static boolean areSameListings(List<String> c1, List<String> c2) {
-        return calcPlagiatFactor(c1, c2) >= 0.45;
+        if (c1.size() <= 10 || c2.size() <= 10) {
+            return false;
+        }
+
+        double maxPlagiatFactor = 0;
+        for (int i = 0; i < 8; ++i) {
+            List<String> cc1 = new ArrayList<>();
+            for (int j = i; j < c1.size(); ++j) {
+                cc1.add(c1.get(j));
+            }
+            maxPlagiatFactor = Math.max(maxPlagiatFactor, calcPlagiatFactor(cc1, c2));
+        }
+        for (int i = 0; i < 8; ++i) {
+            List<String> cc2 = new ArrayList<>();
+            for (int j = i; j < c2.size(); ++j) {
+                cc2.add(c2.get(j));
+            }
+            maxPlagiatFactor = Math.max(maxPlagiatFactor, calcPlagiatFactor(c1, cc2));
+        }
+        System.out.println("mpf: " + maxPlagiatFactor);
+        return maxPlagiatFactor >= 0.45;
     }
 }
