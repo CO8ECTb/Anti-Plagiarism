@@ -195,7 +195,7 @@ public class Main {
 
     static boolean areSameListings(List<String> c1, List<String> c2) {
         if (c1.size() <= 10 || c2.size() <= 10) {
-            return false;
+            return calcPlagiatFactor(c1, c2) >= 0.45;
         }
 
         double maxPlagiatFactor = 0;
